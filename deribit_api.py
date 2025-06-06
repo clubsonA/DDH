@@ -12,7 +12,7 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 WS_URL = os.getenv("API_URL")  # wss://test.deribit.com/ws/api/v2
-CURRENCY = os.getenv("CURRENCY", "ETH").upper()
+CURRENCIES = os.getenv("CURRENCIES", "ETH").upper()
 
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
@@ -78,7 +78,7 @@ class DeribitClient:
             if response.get("id") == request_dict["id"]:
                 return response
 
-    async def get_positions(self, currency=CURRENCY):
+    async def get_positions(self, currency=CURRENCIES):
         req = {
             "jsonrpc": "2.0",
             "id": self._next_id(),

@@ -7,7 +7,7 @@ from logger import logger
 load_dotenv()
 
 
-CURRENCIES = [c.strip().upper() for c in os.getenv("CURRENCY", "ETH").split(",")]
+CURRENCIES = [c.strip().upper() for c in os.getenv("CURRENCIES", "ETH").split(",")]
 
 PORTFOLIO_DELTA_TARGET = float(os.getenv("PORTFOLIO_DELTA_TARGET"))
 PORTFOLIO_DELTA_STEP = float(os.getenv("PORTFOLIO_DELTA_STEP"))
