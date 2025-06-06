@@ -65,6 +65,12 @@ async def run():
         client.close
         return
 
+    contract_size = await client.get_contract_size(PERP_INSTRUMENT_NAME)
+    if contract_size <= 0:
+        logger.error(f"❌ Некорректный размер контракта: {contract_size}")
+        client.close
+        return
+
     logger.info("✅ Подключение и авторизация успешны. Запускаем дельта-хедж")
 
     while True:
@@ -90,6 +96,7 @@ async def run():
 
             if  hedge_required(abs(portfolio_delta), PORTFOLIO_DELTA_TARGET, PORTFOLIO_DELTA_STEP):
                 order_size = calculate_order_size(delta_options, index_price, future_size)
+                order_size = int(order_size / contract_size) * contract_size # делаем размер ордера кратным контракту
                 if abs(order_size) >= MIN_ORDER_SIZE:
                     logger.info(f"Коррекция хеджа (USD): {order_size}")
                     await client.place_order(PERP_INSTRUMENT_NAME, order_size)

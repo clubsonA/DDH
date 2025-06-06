@@ -106,7 +106,36 @@ class DeribitClient:
         }
 
         response = await self.send_request(req)
+
+        if "error" in response:
+            error = response["error"]
+            logger.error(f"❌ Ошибка при размещении ордера: {error['message']} | Причина: {error.get('data', {}).get('reason', 'неизвестно')}")
+            logger.debug(response)
+            return None
+
         logger.info(f"📤 Отправлен рыночный ордер:  {instrument_name} {direction.upper()}  объемом {amount} USD")
+        return response
+
+    async def get_contract_size(self, instrument_name):
+        try:
+            request_id = self._next_id()
+            request = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "public/get_instrument",
+                "params": {"instrument_name": instrument_name}
+            }
+
+            response = await self.send_request(request)
+            if "error" in response:
+                logger.error(f"❌ Ошибка: {response['error']['message']}")
+                return 0
+
+            return response["result"]["contract_size"]
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения contract_size: {e}")
+            return None, None
 
     async def close(self):
         if self.ws:
