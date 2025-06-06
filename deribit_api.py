@@ -78,13 +78,13 @@ class DeribitClient:
             if response.get("id") == request_dict["id"]:
                 return response
 
-    async def get_positions(self):
+    async def get_positions(self, currency=CURRENCY):
         req = {
             "jsonrpc": "2.0",
             "id": self._next_id(),
             "method": "private/get_positions",
             "params": {
-                "currency": CURRENCY,
+                "currency": currency,
                 "kind": "any"
             }
         }
@@ -113,7 +113,7 @@ class DeribitClient:
             logger.debug(response)
             return None
 
-        logger.info(f"📤 Отправлен рыночный ордер:  {instrument_name} {direction.upper()}  объемом {amount} USD")
+        logger.info(f"[{instrument_name}] market order {direction.upper()}  объемом {amount} USD")
         return response
 
     async def get_contract_size(self, instrument_name):
