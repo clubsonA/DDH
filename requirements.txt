@@ -1,0 +1,4 @@
+websockets==15.0.1
+python-dotenv==1.1.0
+certifi==2025.4.26
+colorlog==6.9.0

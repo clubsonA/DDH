@@ -33,7 +33,7 @@ class DeribitClient:
             auth_success = await self.authenticate()
             return auth_success
         except Exception as e:
-            logger.info("❌ Ошибка подключения:", e)
+            logger.error("❌ Ошибка подключения:", e)
             return False
 
     async def authenticate(self):
@@ -57,7 +57,7 @@ class DeribitClient:
             else:
                 self.has_trading_permissions = False
         else:
-            logger.info("❌ Auth failed:", response)
+            logger.error("❌ Auth failed:", response)
             self.has_trading_permissions = False
 
         return auth_success
@@ -67,7 +67,7 @@ class DeribitClient:
 
     async def send_request(self, request_dict):
         if not self.is_ws_open():
-            logger.info("🔄 WebSocket закрыт. Выполняем реконнект...")
+            logger.warning("🔄 WebSocket закрыт. Выполняем реконнект...")
             await self.connect()
 
         await self.ws.send(json.dumps(request_dict))
@@ -106,7 +106,7 @@ class DeribitClient:
         }
 
         response = await self.send_request(req)
-        logger.info(f"📤 Отправлен рыночный ордер:  {instrument_name}{direction.upper()}  объемом {amount} USD")
+        logger.info(f"📤 Отправлен рыночный ордер:  {instrument_name} {direction.upper()}  объемом {amount} USD")
 
     async def close(self):
         if self.ws:
