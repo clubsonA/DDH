@@ -14,7 +14,7 @@ PORTFOLIO_DELTA_STEP = float(os.getenv("PORTFOLIO_DELTA_STEP"))
 
 DELTA_CHECK_FREQ_IN_SEC = int(os.getenv("DELTA_CHECK_FREQ_IN_SEC", "10"))
 
-MIN_ORDER_SIZE = int(os.getenv("MIN_ORDER_SIZE", "10"))
+MIN_ORDER_SIZE_IN_CONTRACTS = int(os.getenv("MIN_ORDER_SIZE_IN_CONTRACTS", "10"))
 
 def get_portfolio_data(positions):
     delta_options = 0
@@ -106,7 +106,7 @@ async def run():
                     order_size = calculate_order_size(delta_options, index_price, future_size, contract_size)
 
 
-                    if abs(order_size) >= MIN_ORDER_SIZE:
+                    if abs(order_size) >= MIN_ORDER_SIZE_IN_CONTRACTS * contract_size:
                         logger.info(f"[{currency}] Коррекция хеджа (USD): {order_size}")
                         await client.place_order(perp_instrument, order_size)
                     else:

@@ -1,7 +1,7 @@
 ```mermaid
 flowchart TD
     Start([Старт])
-    LoadEnv[Загрузка .env и конфигов<br>API_KEYS, CURRENCIES, PORTFOLIO_DELTA_TARGET, PORTFOLIO_DELTA_STEP, DELTA_CHECK_FREQ_IN_SEC, MIN_ORDER_SIZE ]
+    LoadEnv[Загрузка .env и конфигов<br>API_KEYS, CURRENCIES, PORTFOLIO_DELTA_TARGET, PORTFOLIO_DELTA_STEP, DELTA_CHECK_FREQ_IN_SEC, MIN_ORDER_SIZE_IN_CONTRACTS ]
     Connect[Подключение к Deribit]
     CheckConnect{Успешно?}
     ErrorConnect[Ошибка подключения<br>или авторизации]
@@ -15,7 +15,7 @@ flowchart TD
     LogPos[Логгирование дельт<br>и текущей позиции]
     CheckHedge{Требуется хедж?}
     CalcOrder[Вычисление объёма ордера]
-    MinOrder{Объём ≥ MIN_ORDER_SIZE?}
+    MinOrder{Объём ≥ MIN_ORDER_SIZE_IN_CONTRACTS?}
     PlaceOrder[Отправка ордера]
     WarnSmallOrder[Объём ордера слишком мал]
     NoHedge[Хедж не требуется]
