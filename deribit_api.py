@@ -137,6 +137,32 @@ class DeribitClient:
             logger.error(f"❌ Ошибка получения contract_size: {e}")
             return None, None
 
+    async def get_mark_price(self, instrument_name):
+        """
+        Возвращает mark_price для указанного инструмента через public/ticker
+        """
+        try:
+            request = {
+                "jsonrpc": "2.0",
+                "id": self._next_id(),
+                "method": "public/ticker",
+                "params": {
+                    "instrument_name": instrument_name
+                }
+            }
+
+            response = await self.send_request(request)
+            if "error" in response:
+                logger.error(f"❌ Ошибка получения mark_price: {response['error']['message']}")
+                return None
+
+            return response["result"]["mark_price"], response["result"]["index_price"]
+
+        except Exception as e:
+            logger.error(f"❌ Исключение в get_mark_price: {e}")
+            return None
+
+
     async def close(self):
         if self.ws:
             await self.ws.close()

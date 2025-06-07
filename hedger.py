@@ -19,25 +19,29 @@ MIN_ORDER_SIZE_IN_CONTRACTS = int(os.getenv("MIN_ORDER_SIZE_IN_CONTRACTS", "10")
 def get_portfolio_data(positions):
     delta_options = 0
     delta_future = 0
-    index_price = 0
+
     future_size = 0
+    net_delta_options = 0
+
 
     for pos in positions:
         if pos["kind"] == "option":
             delta = pos["delta"] or 0
-            index_price = pos["index_price"]
+            net_delta = delta * pos["mark_price"] + delta
+
             delta_options += delta
+            net_delta_options += net_delta
         if pos["kind"] == "future" and pos["instrument_name"].endswith("PERPETUAL"):
             delta_future = pos["delta"] or 0
             future_size = pos["size"]
-            index_price = pos["index_price"]
 
 
-    return delta_options, delta_future, future_size, index_price
+
+    return net_delta_options, delta_future, future_size
 
 
-def calculate_order_size(delta_options, index_price, current_future_amount, contract_size):
-    hedge_target = -delta_options * index_price
+def calculate_order_size(delta_options, mark_price, current_future_amount, contract_size):
+    hedge_target = -delta_options * mark_price
     order_size = hedge_target - current_future_amount
     order_size = int(order_size / contract_size) * contract_size
 
@@ -88,9 +92,11 @@ async def run():
 
                 perp_instrument = f"{currency}-PERPETUAL"
                 contract_size = contract_sizes[currency]
+                mark_price, index_price = await client.get_mark_price(perp_instrument)
+                logger.debug(mark_price)
 
                 positions = await client.get_positions(currency)
-                delta_options, delta_future, future_size, index_price = get_portfolio_data(positions)
+                delta_options, delta_future, future_size = get_portfolio_data(positions)
 
                 portfolio_delta = round(delta_options + delta_future, 4)
 
@@ -99,11 +105,11 @@ async def run():
                     f"Дельта опционов: {delta_options:.4f} | "
                     f"Дельта фьючерса: {delta_future:.4f} | "
                     f"Позиция по фьючерсу: {future_size:.0f} | "
-                    f"Index price: {index_price}"
+                    f"Market (Index) price: {mark_price} ({index_price})"
                 )
 
                 if hedge_required(abs(portfolio_delta), PORTFOLIO_DELTA_TARGET, PORTFOLIO_DELTA_STEP):
-                    order_size = calculate_order_size(delta_options, index_price, future_size, contract_size)
+                    order_size = calculate_order_size(delta_options, mark_price, future_size, contract_size)
 
 
                     if abs(order_size) >= MIN_ORDER_SIZE_IN_CONTRACTS * contract_size:
