@@ -11,6 +11,7 @@ CURRENCIES = [c.strip().upper() for c in os.getenv("CURRENCIES", "ETH").split(",
 
 PORTFOLIO_DELTA_TARGET = float(os.getenv("PORTFOLIO_DELTA_TARGET"))
 PORTFOLIO_DELTA_STEP = float(os.getenv("PORTFOLIO_DELTA_STEP"))
+PRICE_STEP_PCT = float(os.getenv("PRICE_STEP_PCT"))
 
 DELTA_CHECK_FREQ_IN_SEC = int(os.getenv("DELTA_CHECK_FREQ_IN_SEC", "10"))
 
@@ -47,16 +48,24 @@ def calculate_order_size(delta_options, mark_price, current_future_amount, contr
 
     return int(order_size)
 
-def hedge_required(abs_portfolio_delta, delta_target, delta_step):
-    if abs_portfolio_delta <= delta_target:
+def hedge_required(abs_portfolio_delta, delta_target, delta_step, mark_price, current_price, price_step_pct):
+    # Отклонение от опорной цены в процентах
+    price_deviation_pct = abs(mark_price - current_price) / current_price * 100
+
+    if abs_portfolio_delta <= delta_target and not (
+        price_step_pct > 0 and price_deviation_pct >= price_step_pct
+    ):
         return False
 
-    if delta_step == 0:
-        return True  # если шаг не задан, хеджируем при любом превышении
+    if delta_step > 0 and (abs_portfolio_delta - delta_target) / delta_step >= 1:
+        return True
 
-    step = (abs_portfolio_delta - delta_target) / delta_step
+    if price_step_pct > 0 and price_deviation_pct >= price_step_pct:
+        return True
 
-    return step >= 1
+    return False
+
+
 
 async def run():
     client = DeribitClient()
@@ -85,11 +94,11 @@ async def run():
         await asyncio.sleep(0.2)
 
     logger.info("✅ Подключение и авторизация успешны. Запускаем дельта-хедж")
+    reference_prices = {currency: 0 for currency in CURRENCIES}
 
     while True:
         try:
             for currency in CURRENCIES:
-
                 perp_instrument = f"{currency}-PERPETUAL"
                 contract_size = contract_sizes[currency]
                 mark_price, index_price = await client.get_mark_price(perp_instrument)
@@ -97,24 +106,32 @@ async def run():
 
                 positions = await client.get_positions(currency)
                 delta_options, delta_future, future_size = get_portfolio_data(positions)
-
                 portfolio_delta = round(delta_options + delta_future, 4)
+
+                if reference_prices[currency] == 0:
+                    reference_prices[currency] = mark_price
 
                 logger.info(
                     f"[{currency}] Дельта портфеля: {portfolio_delta:.4f} | "
-                    f"Дельта опционов: {delta_options:.4f} | "
-                    f"Дельта фьючерса: {delta_future:.4f} | "
-                    f"Позиция по фьючерсу: {future_size:.0f} | "
-                    f"Market (Index) price: {mark_price} ({index_price})"
+                    f"Market (Index) price: {mark_price} ({index_price}) | "
+                    f"Reference price: {reference_prices[currency]}"
                 )
 
-                if hedge_required(abs(portfolio_delta), PORTFOLIO_DELTA_TARGET, PORTFOLIO_DELTA_STEP):
+                if hedge_required(
+                    abs_portfolio_delta=abs(portfolio_delta),
+                    delta_target=PORTFOLIO_DELTA_TARGET,
+                    delta_step=PORTFOLIO_DELTA_STEP,
+                    mark_price=mark_price,
+                    current_price=reference_prices[currency],
+                    price_step_pct=PRICE_STEP_PCT
+                ):
                     order_size = calculate_order_size(delta_options, mark_price, future_size, contract_size)
-
 
                     if abs(order_size) >= MIN_ORDER_SIZE_IN_CONTRACTS * contract_size:
                         logger.info(f"[{currency}] Коррекция хеджа (USD): {order_size}")
                         await client.place_order(perp_instrument, order_size)
+                        # сбрасываем reference_price на новую опорную точку
+                        reference_prices[currency] = mark_price
                     else:
                         logger.warning(f"[{currency}] Объем ордера слишком мал: {order_size}")
                 else:
@@ -126,6 +143,7 @@ async def run():
             logger.exception("❌ Ошибка в основном цикле:")
 
         await asyncio.sleep(DELTA_CHECK_FREQ_IN_SEC)
+
 
 
 if __name__ == "__main__":
