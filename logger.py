@@ -25,6 +25,6 @@ file_handler.setFormatter(logging.Formatter(
 ))
 
 logger = logging.getLogger("delta_hedger")
-logger.setLevel(logging.INFO)
-logger.addHandler(stream_handler)
+logger.setLevel(logging.DEBUG)
+#logger.addHandler(stream_handler)
 logger.addHandler(file_handler)

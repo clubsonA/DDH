@@ -28,7 +28,8 @@ def get_portfolio_data(positions):
     for pos in positions:
         if pos["kind"] == "option":
             delta = pos["delta"] or 0
-            net_delta = delta * pos["mark_price"] + delta
+            logger.debug(f"Delta option: {delta} mark price option: {pos['mark_price']}")
+            net_delta = delta  - pos["mark_price"]
 
             delta_options += delta
             net_delta_options += net_delta
@@ -55,6 +56,7 @@ def hedge_required(abs_portfolio_delta, delta_target, delta_step, mark_price, cu
     if abs_portfolio_delta <= delta_target and not (
         price_step_pct > 0 and price_deviation_pct >= price_step_pct
     ):
+        logger.debug(f"price_step_pct > 0 and price_deviation_pct >= price_step_pct: {price_step_pct} > 0 and {price_deviation_pct} >= {price_step_pct}")
         return False
 
     if delta_step > 0 and (abs_portfolio_delta - delta_target) / delta_step >= 1:
@@ -112,7 +114,7 @@ async def run():
                     reference_prices[currency] = mark_price
 
                 logger.info(
-                    f"[{currency}] Дельта портфеля: {portfolio_delta:.4f} | "
+                    f"[{currency}] Дельта портфеля: {portfolio_delta:.4f} | Дельта фьючерса: {delta_future:.4f} Дельта опциона: {delta_options:.4f} | "
                     f"Market (Index) price: {mark_price} ({index_price}) | "
                     f"Reference price: {reference_prices[currency]}"
                 )
